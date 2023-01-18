@@ -9,7 +9,7 @@ import time
 
 def bfs(my_maze):
     """
-    Bread-First-Search algorithm to find the shortest path.
+    Breadth-First-Search algorithm to find the shortest path.
     :param
     my_maze: a randomly created, or loaded maze using pyamaze
     :return
