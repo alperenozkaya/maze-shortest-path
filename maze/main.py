@@ -164,6 +164,65 @@ def dijkstra(my_maze):
     return search_path, dijkstra_path, shortest_path
 
 
+def a_star(my_maze):
+    """
+    A* algorithm to find the shortest path in the maze.
+    :param
+    my_maze: a randomly created, or loaded maze using pyamaze
+    :return
+    search_path: stores each iterated cell
+    a_star_path: stores the shortest path from destination to start
+    shortest_path: stores the shortest path obtained by traversing reversed_path
+    """
+    # initialize the starting cell as the bottom right corner, frontier queue,
+    # path dictionary, and lists.
+    start = (my_maze.rows, my_maze.cols)
+    frontier = PriorityQueue()
+    frontier.put(start, 0)
+    a_star_path = {}  # path from destination to start
+    explored = {start: 0}
+    search_path = []
+    # keep searching until the frontier queue is empty
+    while not frontier.empty():
+        current_cell = frontier.get()  # next cell with the lowest f(x)
+        search_path.append(current_cell)
+        if current_cell == my_maze._goal:  # check whether the cell is the destination
+            break
+        # check for the possible moves (East, West, North, South),
+        # adjust the coordinates of the children cells on the possible move.
+        for i in 'ESNW':
+            if my_maze.maze_map[current_cell][i]:
+                if i == 'E':
+                    child_cell = (current_cell[0], current_cell[1] + 1)
+                elif i == 'W':
+                    child_cell = (current_cell[0], current_cell[1] - 1)
+                elif i == 'N':
+                    child_cell = (current_cell[0] - 1, current_cell[1])
+                elif i == 'S':
+                    child_cell = (current_cell[0] + 1, current_cell[1])
+                # check whether the child cell is already explored.
+                if child_cell in explored:
+                    continue
+                # calculate the f(x) = g(x) + h(x) for the child cell
+                g = explored[current_cell] + 1
+                h = (child_cell[0] - my_maze._goal[0]) + (child_cell[1] - my_maze._goal[1])
+                f = g + h
+                # add the child cell to the frontier queue and explored dictionary
+                frontier.put(child_cell, f)
+                explored[child_cell] = g
+                # add the child cell to the path dictionary, with the current cell as the key.
+                a_star_path[child_cell] = current_cell
+
+    # create the shortest path by tracing back from the destination to the start.
+    shortest_path = {}
+    cell = my_maze._goal
+    # keep searching until the frontier queue is empty
+    while cell != start:
+        shortest_path[a_star_path[cell]] = cell
+        cell = a_star_path[cell]
+    return search_path, a_star_path, shortest_path
+
+
 def random_walk(my_maze):
     """
     An algorithm to find the shortest path by roaming randomly.
@@ -211,54 +270,6 @@ def random_walk(my_maze):
     return search_path, random_path, shortest_path
 
 
-def minimum_spanning_tree(my_maze):
-    """
-    Minimum spanning tree algorithm to find the shortest path.
-    :param
-    my_maze: a randomly created, or loaded maze using pyamaze
-    :return
-    search_path: stores each iterated cell
-    mst_path: stores the shortest path from destination to start
-    shortest_path: stores the shortest path obtained by traversing reversed_path
-    """
-    start = (my_maze.rows, my_maze.cols)
-    frontier = [(0, start)]
-    heapq.heapify(frontier)
-    explored = [start]
-    mst_path = {}
-    search_path = []
-    while len(frontier) > 0:
-        # pop the lowest cost cell from the frontier.
-        current_cost, current_cell = heapq.heappop(frontier)
-        search_path.append(current_cell)
-        if current_cell == my_maze._goal:
-            break
-        for i in 'ESNW':
-            if my_maze.maze_map[current_cell][i]:
-                if i == 'E':
-                    child_cell = (current_cell[0], current_cell[1] + 1)
-                elif i == 'W':
-                    child_cell = (current_cell[0], current_cell[1] - 1)
-                elif i == 'S':
-                    child_cell = (current_cell[0] + 1, current_cell[1])
-                elif i == 'N':
-                    child_cell = (current_cell[0] - 1, current_cell[1])
-                if child_cell in explored:
-                    continue
-                explored.append(child_cell)
-                # push the child cell to the frontier with cost '1'.
-                heapq.heappush(frontier, (1, child_cell))
-                mst_path[child_cell] = current_cell
-
-    shortest_path = {}
-    cell = my_maze._goal
-
-    while cell != start:
-        shortest_path[mst_path[cell]] = cell
-        cell = mst_path[cell]
-    return search_path, mst_path, shortest_path
-
-
 def find_paths(my_maze, algo):
     """
     A function to run the function that corresponds to chosen algorithm. It also calculates the
@@ -286,16 +297,17 @@ def find_paths(my_maze, algo):
         search_path, reversed_path, shortest_path = dijkstra(my_maze)
         end_time = time.perf_counter()
         execution_time = (end_time - start_time) * 1000000  # in ns
+    elif algo == 'a_star':
+        start_time = time.perf_counter()
+        search_path, reversed_path, shortest_path = a_star(my_maze)
+        end_time = time.perf_counter()
+        execution_time = (end_time - start_time) * 1000000  # in ns
     elif algo == 'random':
         start_time = time.perf_counter()
         search_path, reversed_path, shortest_path = random_walk(my_maze)
         end_time = time.perf_counter()
         execution_time = (end_time - start_time) * 1000000  # in ns
-    elif algo == 'mst':
-        start_time = time.perf_counter()
-        search_path, reversed_path, shortest_path = minimum_spanning_tree(my_maze)
-        end_time = time.perf_counter()
-        execution_time = (end_time - start_time) * 1000000  # in ns
+
     else:
         raise ValueError("Algorithm name is invalid!")
 
@@ -346,11 +358,11 @@ if __name__ == '__main__':
         else:
             delay = 10
 
-        paths = find_paths(test_maze, str(input("Choose an algorithm: bfs-dfs-dijkstra-random-mst:\n")))
+        paths = find_paths(test_maze, str(input("Choose an algorithm: bfs-dfs-dijkstra-a_star-random:\n")))
         visualize_paths(test_maze, paths, delay)
         test_maze.run()
     else:
-        algorithm = str(input("Choose an algorithm: bfs-dfs-dijkstra-random-mst:\n"))
+        algorithm = str(input("Choose an algorithm: bfs-dfs-dijkstra-a_star-random:\n"))
         maze_sizes = [5, 10, 20, 30]
         agent_delay = [400, 100, 25, 10]
         size_index = int(input("Choose the size of maze --> 0:5x5, 1:10x10, 2:20x20, 3:30x30\n"))
